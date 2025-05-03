@@ -27,7 +27,7 @@ const RadarView: React.FC<RadarViewProps> = ({
       if (radarRef.current) {
         const { width, height } = radarRef.current.getBoundingClientRect();
         const minDimension = Math.min(width, height);
-        const newMaxRadius = Math.max(minDimension * 0.45, 400);
+        const newMaxRadius = Math.min(minDimension * 0.4, 350);
 
         setDimensions({ width, height });
         setCenterPoint({ x: width / 2, y: height / 2 });
@@ -209,13 +209,13 @@ const RadarView: React.FC<RadarViewProps> = ({
   return (
     <div className="space-y-8">
       <div className="relative">
-        <button
-          onClick={handleExport}
-          className="absolute top-4 right-4 z-50 bg-white dark:bg-gray-800 px-3 py-1 rounded-md shadow-sm flex items-center space-x-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 transition-colors duration-200"
-        >
-          <Download className="w-4 h-4" />
-          <span>Export as PNG</span>
-        </button>
+      <button
+        onClick={handleExport}
+        className="z-50 bg-white dark:bg-gray-800 px-3 py-1 rounded-md shadow-sm flex items-center space-x-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 transition-colors duration-200"
+      >
+        <Download className="w-4 h-4" />
+        <span>Export as PNG</span>
+      </button>
 
         <div
           ref={radarRef}
