@@ -219,11 +219,7 @@ const RadarView: React.FC<RadarViewProps> = ({
 
         <div
           ref={radarRef}
-          className="relative w-full h-full min-h-[800px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white/90 dark:bg-gray-900/90 shadow-md transition-colors duration-200"
-          style={{
-            minWidth: '800px',
-            padding: '80px',
-          }}
+          className="relative w-full aspect-square max-w-[1000px] mx-auto p-4 sm:p-12 md:p-20 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white/90 dark:bg-gray-900/90 shadow-md transition-colors duration-200"
         >
           {renderStateCircles()}
           {renderQuadrantLines()}
