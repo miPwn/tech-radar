@@ -3,14 +3,14 @@ import { toPng } from 'html-to-image';
 import { Download } from 'lucide-react';
 import { Technology, AdoptionState, Quadrant } from '../types';
 import { stateToRadiusMap, stateToColorMap, quadrantColorMap } from '../data/initialData';
-import { polarToCartesian, findValidPosition, constrainAngleToQuadrant, calculateTechnologyPosition } from '../utils/radarUtils';
+import { polarToCartesian, calculateTechnologyPosition } from '../utils/radarUtils';
 import TechnologyItem from './TechnologyItem';
 import TechnologySummary from './TechnologySummary';
 
 interface RadarViewProps {
   technologies: Technology[];
-  setTechnologies: (techs: Technology[]) => void;
   onTechnologyClick: (id: string) => void;
+  onTechnologyDrag?: (id: string, x: number, y: number) => void;
 }
 
 const RadarView: React.FC<RadarViewProps> = ({
@@ -22,7 +22,6 @@ const RadarView: React.FC<RadarViewProps> = ({
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [centerPoint, setCenterPoint] = useState({ x: 0, y: 0 });
   const [maxRadius, setMaxRadius] = useState(0);
-  const [validPositions, setValidPositions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -30,7 +29,7 @@ const RadarView: React.FC<RadarViewProps> = ({
         const { width, height } = radarRef.current.getBoundingClientRect();
         const minDimension = Math.min(width, height);
         const newMaxRadius = Math.max(minDimension * 0.45, 400);
-        
+
         setDimensions({ width, height });
         setCenterPoint({ x: width / 2, y: height / 2 });
         setMaxRadius(newMaxRadius);
@@ -50,36 +49,14 @@ const RadarView: React.FC<RadarViewProps> = ({
     };
   }, []);
 
-
-  
-  // Validate positions whenever technologies change
-  useEffect(() => {
-    const newValidPositions: Record<string, boolean> = {};
-    
-    technologies.forEach(tech => {
-      const validPosition = findValidPosition(
-        tech,
-        technologies.filter(t => t.id !== tech.id),
-        centerPoint.x,
-        centerPoint.y,
-        maxRadius
-      );
-      
-      const angle = constrainAngleToQuadrant(validPosition.angle, tech.quadrant);
-      newValidPositions[tech.id] = angle === validPosition.angle;
-    });
-    
-    setValidPositions(newValidPositions);
-  }, [technologies, centerPoint, maxRadius]);
-
   const handleExport = async () => {
     if (radarRef.current) {
       try {
         const dataUrl = await toPng(radarRef.current, {
           quality: 0.95,
-          backgroundColor: document.documentElement.classList.contains('dark') ? '#1a1a1a' : 'white'
+          backgroundColor: document.documentElement.classList.contains('dark') ? '#1a1a1a' : 'white',
         });
-        
+
         const link = document.createElement('a');
         link.download = `tech-radar-${new Date().toISOString().split('T')[0]}.png`;
         link.href = dataUrl;
@@ -90,63 +67,58 @@ const RadarView: React.FC<RadarViewProps> = ({
     }
   };
 
-const renderStateCircles = () => {
-  const states = Object.keys(stateToRadiusMap) as AdoptionState[];
+  const renderStateCircles = () => {
+    const states = Object.keys(stateToRadiusMap) as AdoptionState[];
+  
+    return states.map((state, index) => {
+      const outerRadius = stateToRadiusMap[state].outer * maxRadius;
+      const color = stateToColorMap[state] ?? {
+        light: 'rgba(255, 255, 255, 0.1)',
+        dark: 'rgba(200, 200, 200, 0.2)',
+        border: '#999999'
+      };
+  
+      return (
+        <div
+          key={state}
+          className="absolute rounded-full border-2 transition-all duration-300"
+          style={{
+            width: outerRadius * 2,
+            height: outerRadius * 2,
+            left: centerPoint.x - outerRadius,
+            top: centerPoint.y - outerRadius,
+            zIndex: 10 + index,
+            borderColor: color.border,
+            background: `radial-gradient(circle, ${color.light} 0%, ${color.dark} 100%)`,
+            boxShadow: `0 0 6px ${color.dark}`
+          }}
+        />
+      );
+    });
+  };
 
-  return states.map((state, index) => {
-    const outerRadius = stateToRadiusMap[state].outer * maxRadius;
-    const color = stateToColorMap[state] ?? {
-      light: 'rgba(255, 255, 255, 0.1)',
-      dark: 'rgba(200, 200, 200, 0.2)',
-      border: '#999999'
-    };
-
-    return (
+  const renderQuadrantLines = () => (
+    <>
       <div
-        key={state}
-        className="absolute rounded-full border-2 transition-all duration-300"
+        className="absolute bg-gray-300/50 dark:bg-gray-600/50 transition-all duration-300"
         style={{
-          width: outerRadius * 2,
-          height: outerRadius * 2,
-          left: centerPoint.x - outerRadius,
-          top: centerPoint.y - outerRadius,
-          zIndex: 10 + index,
-          borderColor: color.border,
-          background: `radial-gradient(circle, ${color.light} 0%, ${color.dark} 100%)`,
-          boxShadow: `0 0 6px ${color.dark}` // <- This is where it goes
+          width: '2px',
+          height: maxRadius * 2,
+          left: centerPoint.x - 1,
+          top: centerPoint.y - maxRadius,
         }}
       />
-    );
-  });
-};
-
-
-
-
-  const renderQuadrantLines = () => {
-    return (
-      <>
-        <div 
-          className="absolute bg-gray-300/50 dark:bg-gray-600/50 transition-all duration-300"
-          style={{
-            width: '2px',
-            height: maxRadius * 2,
-            left: centerPoint.x - 1,
-            top: centerPoint.y - maxRadius,
-          }}
-        />
-        <div 
-          className="absolute bg-gray-300/50 dark:bg-gray-600/50 transition-all duration-300"
-          style={{
-            width: maxRadius * 2,
-            height: '2px',
-            left: centerPoint.x - maxRadius,
-            top: centerPoint.y - 1,
-          }}
-        />
-      </>
-    );
-  };
+      <div
+        className="absolute bg-gray-300/50 dark:bg-gray-600/50 transition-all duration-300"
+        style={{
+          width: maxRadius * 2,
+          height: '2px',
+          left: centerPoint.x - maxRadius,
+          top: centerPoint.y - 1,
+        }}
+      />
+    </>
+  );
 
   const renderQuadrantTitles = () => {
     const quadrants: { name: Quadrant; angle: number }[] = [
@@ -159,11 +131,11 @@ const renderStateCircles = () => {
     return quadrants.map(({ name, angle }) => {
       const radians = (angle * Math.PI) / 180;
       const radius = maxRadius * 1.2;
-      const x = centerPoint.x + (radius * Math.cos(radians - Math.PI / 2));
-      const y = centerPoint.y + (radius * Math.sin(radians - Math.PI / 2));
-      
+      const x = centerPoint.x + radius * Math.cos(radians - Math.PI / 2);
+      const y = centerPoint.y + radius * Math.sin(radians - Math.PI / 2);
+
       const quadrantColor = quadrantColorMap[name];
-      
+
       return (
         <div
           key={name}
@@ -182,45 +154,17 @@ const renderStateCircles = () => {
     });
   };
 
-const renderTechnologies = () => {
-  const usedPositions: { x: number; y: number }[] = [];
-
-  return technologies.map((tech) => {
-    const position = calculateTechnologyPosition(
-      tech,
-      usedPositions,
-      centerPoint.x,
-      centerPoint.y,
-      maxRadius
-    );
-
-    usedPositions.push(position);
-
-    return (
-      <TechnologyItem
-        key={tech.id}
-        technology={tech}
-        position={position}
-        onClick={() => onTechnologyClick(tech.id)}
-        isValidPosition={true}
-      />
-    );
-  });
-};
-
-
-
   const renderStateLabels = () => {
     const states = Object.keys(stateToRadiusMap) as AdoptionState[];
-    
+
     return states.map((state) => {
       const radius = (stateToRadiusMap[state].inner + stateToRadiusMap[state].outer) / 2;
       const angle = -45;
       const radians = (angle * Math.PI) / 180;
-      
-      const x = centerPoint.x + (radius * maxRadius * Math.cos(radians));
-      const y = centerPoint.y + (radius * maxRadius * Math.sin(radians));
-      
+
+      const x = centerPoint.x + radius * maxRadius * Math.cos(radians);
+      const y = centerPoint.y + radius * maxRadius * Math.sin(radians);
+
       return (
         <div
           key={state}
@@ -237,6 +181,33 @@ const renderTechnologies = () => {
     });
   };
 
+  const renderTechnologies = () => {
+    const positions: { [id: string]: { x: number; y: number } } = {};
+
+    return technologies.map((tech, index) => {
+      const priorPositions = Object.values(positions);
+      const position = calculateTechnologyPosition(
+        tech,
+        priorPositions,
+        centerPoint.x,
+        centerPoint.y,
+        maxRadius
+      );
+
+      positions[tech.id] = position;
+
+      return (
+        <TechnologyItem
+          key={tech.id}
+          technology={tech}
+          position={position}
+          onClick={() => onTechnologyClick(tech.id)}
+          isValidPosition={true}
+        />
+      );
+    });
+  };
+
   return (
     <div className="space-y-8">
       <div className="relative">
@@ -247,8 +218,8 @@ const renderTechnologies = () => {
           <Download className="w-4 h-4" />
           <span>Export as PNG</span>
         </button>
-        
-        <div 
+
+        <div
           ref={radarRef}
           className="relative w-full h-full min-h-[800px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white/90 dark:bg-gray-900/90 shadow-md transition-colors duration-200"
           style={{

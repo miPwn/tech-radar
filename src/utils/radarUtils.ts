@@ -1,7 +1,7 @@
 import { AdoptionState, Technology, Quadrant } from "../types";
 import { stateToRadiusMap } from "../data/initialData";
 
-// Quadrant angles
+// Define quadrant angle ranges
 const quadrantRanges: Record<Quadrant, { start: number; end: number }> = {
   techniques: { start: 0, end: 90 },
   tools: { start: 90, end: 180 },
@@ -9,16 +9,12 @@ const quadrantRanges: Record<Quadrant, { start: number; end: number }> = {
   languages: { start: 270, end: 360 }
 };
 
-// Spacing + spiral constants
-const MIN_BORDER_PADDING = 30;
-const QUADRANT_PADDING = 15;
-const SPIRAL_STEP = 5;
-const MAX_TRIES = 500;
+// Constants for spacing and layout
+const MIN_ICON_DISTANCE = 90; // Increased spacing
+const QUADRANT_PADDING = 5;
+const MAX_ATTEMPTS = 200;
 
-// Add jitter to break symmetry
-const jitter = (min: number, max: number): number => Math.random() * (max - min) + min;
-
-// Polar to cartesian
+// Convert polar coordinates to cartesian
 export const polarToCartesian = (
   angle: number,
   radius: number,
@@ -26,80 +22,41 @@ export const polarToCartesian = (
   centerY: number
 ): { x: number; y: number } => {
   const radians = ((angle - 90) * Math.PI) / 180;
-  const adjustedRadius = Math.max(radius * (1 - MIN_BORDER_PADDING / Math.max(centerX, centerY)), 0);
   return {
-    x: centerX + adjustedRadius * Math.cos(radians),
-    y: centerY + adjustedRadius * Math.sin(radians)
+    x: centerX + radius * Math.cos(radians),
+    y: centerY + radius * Math.sin(radians)
   };
 };
 
-// Collision check with dynamic spacing
+// Check for collisions
 export const wouldCollide = (
   newPos: { x: number; y: number },
-  existingPositions: { x: number; y: number }[],
-  radius: number
+  existingPositions: { x: number; y: number }[]
 ): boolean => {
-  const scaledDistance = 50 + radius * 100;
-  return existingPositions.some(pos => {
+  return existingPositions.some((pos) => {
     const dx = newPos.x - pos.x;
     const dy = newPos.y - pos.y;
-    return Math.sqrt(dx * dx + dy * dy) < scaledDistance;
+    return Math.sqrt(dx * dx + dy * dy) < MIN_ICON_DISTANCE;
   });
 };
 
-// Get state range
-export const getStateRadiusRange = (state: AdoptionState) => ({
-  min: stateToRadiusMap[state].inner + MIN_BORDER_PADDING / 1000,
-  max: stateToRadiusMap[state].outer - MIN_BORDER_PADDING / 1000
-});
+// Radius boundaries for state
+export const getStateRadiusRange = (state: AdoptionState) => {
+  return {
+    min: stateToRadiusMap[state].inner,
+    max: stateToRadiusMap[state].outer
+  };
+};
 
-// Constrain angle
+// Determine angle range for a quadrant
 export const constrainAngleToQuadrant = (angle: number, quadrant: Quadrant): number => {
-  const range = quadrantRanges[quadrant];
-  const normalized = ((angle % 360) + 360) % 360;
-  return normalized >= range.start && normalized <= range.end
-    ? normalized
-    : range.start + (range.end - range.start) / 2;
+  const { start, end } = quadrantRanges[quadrant];
+  const span = end - start;
+  const adjusted = ((angle - start + span) % span) + start;
+  return Math.max(start + QUADRANT_PADDING, Math.min(adjusted, end - QUADRANT_PADDING));
 };
 
-// Core layout logic
-export const findValidPosition = (
-  technology: Technology,
-  existingTechs: Technology[],
-  centerX: number,
-  centerY: number,
-  maxRadius: number
-): { angle: number; radius: number } => {
-  const range = quadrantRanges[technology.quadrant];
-  const stateRange = getStateRadiusRange(technology.state);
-
-  const baseAngle = range.start + (range.end - range.start) / 2 + jitter(-12, 12);
-  const baseRadius = (stateRange.min + stateRange.max) / 2 + jitter(-0.03, 0.03);
-
-  const existingPositions = existingTechs.map(tech =>
-    calculateTechnologyPosition(tech, [], centerX, centerY, maxRadius)
-  );
-
-  let angle = baseAngle;
-  let radius = baseRadius;
-  let spiralStep = 0;
-
-  while (spiralStep < MAX_TRIES) {
-    angle = baseAngle + (spiralStep * SPIRAL_STEP) % (range.end - range.start - 2 * QUADRANT_PADDING);
-    radius = baseRadius + Math.sin(spiralStep * 0.15) * 0.15;
-
-    const pos = polarToCartesian(angle, radius * maxRadius, centerX, centerY);
-
-    if (!wouldCollide(pos, existingPositions, radius)) {
-      return { angle, radius };
-    }
-    spiralStep++;
-  }
-
-  return { angle: baseAngle, radius: baseRadius };
-};
-
-// Compute cartesian pos from tech
+// Calculate cartesian position for a technology
 export const calculateTechnologyPosition = (
   technology: Technology,
   existingPositions: { x: number; y: number }[],
@@ -107,43 +64,47 @@ export const calculateTechnologyPosition = (
   centerY: number,
   maxRadius: number
 ): { x: number; y: number } => {
-  const { start, end } = quadrantRanges[technology.quadrant];
+  const angleRange = quadrantRanges[technology.quadrant];
   const stateRange = getStateRadiusRange(technology.state);
+  const radiusMin = stateRange.min * maxRadius + 20;
+  const radiusMax = stateRange.max * maxRadius - 20;
 
-  const midRadius = (stateRange.min + stateRange.max) / 2;
-  const radiusStep = (stateRange.max - stateRange.min) / 10;
-
-  let spiralStep = 0;
+  let bestPosition = { x: 0, y: 0 };
   let found = false;
-  let position = { x: 0, y: 0 };
+  let attempt = 0;
 
-  // Use spiral to explore position candidates
-  while (!found && spiralStep < 360) {
-    const angle = start + QUADRANT_PADDING + (spiralStep * SPIRAL_STEP) % (end - start - 2 * QUADRANT_PADDING);
-    const radius = stateRange.min + ((spiralStep % 10) * radiusStep);
+  while (!found && attempt < MAX_ATTEMPTS) {
+    const angle = angleRange.start + QUADRANT_PADDING + Math.random() * (angleRange.end - angleRange.start - QUADRANT_PADDING * 2);
+    const radius = radiusMin + Math.random() * (radiusMax - radiusMin);
+    const pos = polarToCartesian(angle, radius, centerX, centerY);
 
-    position = polarToCartesian(angle, radius * maxRadius, centerX, centerY);
-
-    if (!wouldCollide(position, existingPositions, radius)) {
+    if (!wouldCollide(pos, existingPositions)) {
+      bestPosition = pos;
       found = true;
     }
 
-    spiralStep++;
+    attempt++;
   }
 
-  // Fallback to center of quadrant if no space found
+  // fallback
   if (!found) {
-    const fallbackAngle = start + (end - start) / 2;
-    const fallbackRadius = midRadius * maxRadius;
-    position = polarToCartesian(fallbackAngle, fallbackRadius, centerX, centerY);
+    const fallbackAngle = angleRange.start + (angleRange.end - angleRange.start) / 2;
+    const fallbackRadius = (radiusMin + radiusMax) / 2;
+    bestPosition = polarToCartesian(fallbackAngle, fallbackRadius, centerX, centerY);
   }
 
-  return position;
+  return bestPosition;
 };
 
-// Helpers
-export const findTechnologyById = (technologies: Technology[], id: string): Technology | undefined =>
-  technologies.find((tech) => tech.id === id);
+// Find tech by ID
+export const findTechnologyById = (
+  technologies: Technology[],
+  id: string
+): Technology | undefined => {
+  return technologies.find((tech) => tech.id === id);
+};
 
-export const generateId = (): string =>
-  Math.random().toString(36).substring(2, 10);
+// Unique ID generator
+export const generateId = (): string => {
+  return Math.random().toString(36).substring(2, 10);
+};

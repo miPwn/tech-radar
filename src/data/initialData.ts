@@ -1,5 +1,13 @@
 import { RadarData } from '../types';
 
+export enum AdoptionState {
+  Adopted = 'adopted',
+  Planned = 'planned',
+  Evaluation = 'evaluation',
+  Submitted = 'submitted',
+  Rejected = 'rejected'
+}
+
 export const initialRadarData: RadarData = 
   {
   "companyName": "Cube",
@@ -161,37 +169,32 @@ export const stateToRadiusMap = {
   rejected: { inner: 0.8, outer: 0.95 }
 };
 
-export const stateToColorMap = {
-  adopted: {
-    light: 'rgba(124, 252, 0, 0.25)',
-    dark: 'rgba(0, 100, 0, 0.5)',
-    border: '#006400',
-    tableHeader: 'bg-[#58ab58] text-white'
+export const stateToColorMap: Record<AdoptionState, { border: string; light: string; dark: string }> = {
+  [AdoptionState.Adopted]: {
+    border: '#22c55e',
+    light: 'rgba(34, 197, 94, 0.2)',
+    dark: 'rgba(34, 197, 94, 0.4)',
   },
-  planned: {
-    light: 'rgba(144, 238, 144, 0.25)',
-    dark: 'rgba(50, 205, 50, 0.5)',
-    border: '#32CD32',
-    tableHeader: 'bg-[#7ed87e] text-black'
+  [AdoptionState.Planned]: {
+    border: '#facc15',
+    light: 'rgba(250, 204, 21, 0.2)',
+    dark: 'rgba(250, 204, 21, 0.4)',
   },
-  evaluation: {
-    light: 'rgba(255, 179, 71, 0.25)',
-    dark: 'rgba(255, 140, 0, 0.5)',
-    border: '#ff8c00',
-    tableHeader: 'bg-[#f8a039] text-black'
+  [AdoptionState.Evaluation]: {
+    border: '#f97316',
+    light: 'rgba(249, 115, 22, 0.2)',
+    dark: 'rgba(249, 115, 22, 0.4)',
   },
-  submitted: {
-    light: 'rgba(173, 216, 230, 0.25)',
-    dark: 'rgba(135, 206, 235, 0.5)',
-    border: '#87CEEB',
-    tableHeader: 'bg-[#95d2eb] text-black'
+  [AdoptionState.Submitted]: {
+    border: '#3b82f6',
+    light: 'rgba(59, 130, 246, 0.2)',
+    dark: 'rgba(59, 130, 246, 0.4)',
   },
-  rejected: {
-    light: 'rgba(255, 182, 193, 0.25)',
-    dark: 'rgba(255, 105, 180, 0.5)',
-    border: '#FF69B4',
-    tableHeader: 'bg-[#ec8ea9] text-black'
-  }
+  [AdoptionState.Rejected]: {
+    border: '#f87171',
+    light: 'rgba(248, 113, 113, 0.2)',
+    dark: 'rgba(248, 113, 113, 0.4)',
+  },
 };
 
 export const quadrantColorMap = {
