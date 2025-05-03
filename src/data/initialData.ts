@@ -169,33 +169,14 @@ export const stateToRadiusMap = {
   rejected: { inner: 0.8, outer: 0.95 }
 };
 
-export const stateToColorMap: Record<AdoptionState, { border: string; light: string; dark: string }> = {
-  [AdoptionState.Adopted]: {
-    border: '#22c55e',
-    light: 'rgba(34, 197, 94, 0.2)',
-    dark: 'rgba(34, 197, 94, 0.4)',
-  },
-  [AdoptionState.Planned]: {
-    border: '#facc15',
-    light: 'rgba(250, 204, 21, 0.2)',
-    dark: 'rgba(250, 204, 21, 0.4)',
-  },
-  [AdoptionState.Evaluation]: {
-    border: '#f97316',
-    light: 'rgba(249, 115, 22, 0.2)',
-    dark: 'rgba(249, 115, 22, 0.4)',
-  },
-  [AdoptionState.Submitted]: {
-    border: '#3b82f6',
-    light: 'rgba(59, 130, 246, 0.2)',
-    dark: 'rgba(59, 130, 246, 0.4)',
-  },
-  [AdoptionState.Rejected]: {
-    border: '#f87171',
-    light: 'rgba(248, 113, 113, 0.2)',
-    dark: 'rgba(248, 113, 113, 0.4)',
-  },
+export const stateToColorMap: Record<AdoptionState, { dark: string }> = {
+  [AdoptionState.Adopted]:   { dark: '#22c55e' }, // Green
+  [AdoptionState.Planned]:   { dark: '#84cc16' }, // Lime
+  [AdoptionState.Evaluation]:{ dark: '#eab308' }, // Yellow (Tailwind yellow-500)
+  [AdoptionState.Submitted]: { dark: '#3b82f6' }, // Blue
+  [AdoptionState.Rejected]:  { dark: '#ef4444' }, // Red
 };
+
 
 export const quadrantColorMap = {
   techniques: { light: 'text-blue-600', dark: 'dark:text-blue-400' },

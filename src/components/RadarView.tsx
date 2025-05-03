@@ -3,7 +3,7 @@ import { toPng } from 'html-to-image';
 import { Download } from 'lucide-react';
 import { Technology, AdoptionState, Quadrant } from '../types';
 import { stateToRadiusMap, stateToColorMap, quadrantColorMap } from '../data/initialData';
-import { polarToCartesian, calculateTechnologyPosition } from '../utils/radarUtils';
+import { calculateTechnologyPosition } from '../utils/radarUtils';
 import TechnologyItem from './TechnologyItem';
 import TechnologySummary from './TechnologySummary';
 
@@ -16,10 +16,9 @@ interface RadarViewProps {
 const RadarView: React.FC<RadarViewProps> = ({
   technologies,
   onTechnologyClick,
-  onTechnologyDrag,
 }) => {
   const radarRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [, setDimensions] = useState({ width: 0, height: 0 });
   const [centerPoint, setCenterPoint] = useState({ x: 0, y: 0 });
   const [maxRadius, setMaxRadius] = useState(0);
 
@@ -71,31 +70,30 @@ const RadarView: React.FC<RadarViewProps> = ({
     const states = Object.keys(stateToRadiusMap) as AdoptionState[];
   
     return states.map((state, index) => {
-      const outerRadius = stateToRadiusMap[state].outer * maxRadius;
-      const color = stateToColorMap[state] ?? {
-        light: 'rgba(255, 255, 255, 0.1)',
-        dark: 'rgba(200, 200, 200, 0.2)',
-        border: '#999999'
-      };
+      const inner = stateToRadiusMap[state].inner * maxRadius;
+      const outer = stateToRadiusMap[state].outer * maxRadius;
+      const color = stateToColorMap[state];
   
       return (
         <div
           key={state}
-          className="absolute rounded-full border-2 transition-all duration-300"
+          className="absolute rounded-full border border-gray-900/10 dark:border-white/10"
           style={{
-            width: outerRadius * 2,
-            height: outerRadius * 2,
-            left: centerPoint.x - outerRadius,
-            top: centerPoint.y - outerRadius,
+            width: outer * 2,
+            height: outer * 2,
+            left: centerPoint.x - outer,
+            top: centerPoint.y - outer,
+            backgroundColor: color.dark,
+            clipPath: `circle(${outer}px at center)`,
+            maskImage: `radial-gradient(circle ${inner}px at center, transparent 0, transparent ${inner}px, black ${inner + 1}px)`,
+            WebkitMaskImage: `radial-gradient(circle ${inner}px at center, transparent 0, transparent ${inner}px, black ${inner + 1}px)`,
             zIndex: 10 + index,
-            borderColor: color.border,
-            background: `radial-gradient(circle, ${color.light} 0%, ${color.dark} 100%)`,
-            boxShadow: `0 0 6px ${color.dark}`
           }}
         />
       );
     });
   };
+  
 
   const renderQuadrantLines = () => (
     <>
@@ -184,7 +182,7 @@ const RadarView: React.FC<RadarViewProps> = ({
   const renderTechnologies = () => {
     const positions: { [id: string]: { x: number; y: number } } = {};
 
-    return technologies.map((tech, index) => {
+    return technologies.map((tech) => {
       const priorPositions = Object.values(positions);
       const position = calculateTechnologyPosition(
         tech,
