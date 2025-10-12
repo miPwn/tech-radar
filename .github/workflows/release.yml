@@ -28,7 +28,13 @@ jobs:
         run: npm ci
 
       - name: Security vulnerability audit
-        run: npm audit --audit-level=high
+        run: |
+          npm audit --audit-level=moderate
+          if [ $? -ne 0 ]; then
+            echo "Security vulnerabilities found. Attempting to fix..."
+            npm audit fix
+            npm audit --audit-level=moderate
+          fi
 
       - name: Build
         run: npm run build

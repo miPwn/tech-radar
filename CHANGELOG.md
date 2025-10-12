@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2025-10-12
+
+- Fix all security vulnerabilities (7 CVEs resolved)
+- Update dependencies: Vite 6.3.6, ESLint plugins, Babel helpers
+- Resolve RegExp DoS vulnerabilities in brace-expansion and cross-spawn
+- Update browserslist database to latest version
+- Enhance release workflow with automatic vulnerability fix attempts
+
 ## [1.1.1] - 2025-10-12
 
 - Fix GitHub Actions workflow by removing failed deployment step
