@@ -70,11 +70,7 @@ This helps teams make informed technology decisions at a glance.
 - Data sync with external systems (GitHub Issues, Airtable, etc.)
 - Role-based views and permissions
 
----
 
-## Author
 
-Prototyped and developed by **Rich Pashley** using Bolt, React, and TailwindCSS.  
-For inquiries or collaboration: [@rtmpashley](mailto:mipwn@mipwn.com)
 
 ---
